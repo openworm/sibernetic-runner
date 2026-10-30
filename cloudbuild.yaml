@@ -1,0 +1,23 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'SIBERNETIC_REPO=${_SIBERNETIC_REPO}'
+      - '--build-arg'
+      - 'SIBERNETIC_REF=${_SIBERNETIC_REF}'
+      - '-t'
+      - '${_IMAGE}'
+      - '.'
+images:
+  - '${_IMAGE}'
+substitutions:
+  _IMAGE: 'us-east4-docker.pkg.dev/${PROJECT_ID}/sibernetic-runner/sibernetic-runner:latest'
+  _SIBERNETIC_REPO: 'https://github.com/openworm/sibernetic.git'
+  _SIBERNETIC_REF: 'development'
+options:
+  # Compiling Sibernetic on top of the nvidia/cuda devel image runs the
+  # default builder out of memory.
+  machineType: 'E2_HIGHCPU_32'
+  dynamicSubstitutions: true
+timeout: 1800s

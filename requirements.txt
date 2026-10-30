@@ -1,0 +1,18 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+jinja2>=3.1.0
+google-cloud-storage>=2.14.0
+requests>=2.31.0
+# Pulled in transitively by google-cloud-storage's auth path; pin
+# explicitly because the nvidia/cuda base image's system Python doesn't
+# bundle a compatible _cffi_backend.
+cffi>=1.16.0
+cryptography>=42.0.0
+
+numpy>=1.26,<2
+
+# Optional MP4 rendering of position buffers via render_movie.py. pyvista uses VTK's OSMesa-capable build for
+# headless offscreen rendering; imageio[ffmpeg] handles the encode.
+pyvista>=0.43.0
+imageio[ffmpeg]>=2.34.0

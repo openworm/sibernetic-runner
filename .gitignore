@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+
+# Cloud Build / local artifacts
+.cloudbuild/
+*.log
+
+# Local secrets — keep deploy-time secrets out of git
+.env
+.env.*
+!.env.example
+secrets/
+
+# OS
+.DS_Store

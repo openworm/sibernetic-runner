@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sibernetic Runner</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; }
+    h1 { margin-bottom: 0.2em; }
+    .sub { color: #666; margin-top: 0; }
+    label { display: block; margin: 1em 0 0.3em; font-weight: 600; }
+    input, select { width: 100%; padding: 0.5em; font-size: 1em; box-sizing: border-box; }
+    button { margin-top: 1.5em; padding: 0.8em 1.4em; font-size: 1em; background: #0070f3; color: white; border: 0; border-radius: 4px; cursor: pointer; }
+    button:disabled { background: #999; cursor: wait; }
+    pre { background: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.85em; }
+    .status { margin-top: 1.5em; padding: 1em; background: #f5f5f5; border-left: 4px solid #0070f3; }
+  </style>
+</head>
+<body>
+  <h1>Sibernetic Runner</h1>
+  <p class="sub">Submit a Sibernetic (OpenCL) simulation job to the Cloud Run GPU service.</p>
+
+  <form id="runForm">
+    <label>Config (Sibernetic config name)</label>
+    <input name="config" value="demo1" required>
+
+    <label>Time limit (sim seconds)</label>
+    <input name="timelimit" type="number" step="0.001" value="0.05" required>
+
+    <label>Log step</label>
+    <input name="logstep" type="number" min="1" value="10" required>
+
+    <label>Sibernetic ref (optional — branch, tag, or SHA to build at request time)</label>
+    <input name="sibernetic_ref" placeholder="leave blank to use baked binary; e.g. a branch name or 61d8fd4">
+
+    <label style="display: flex; align-items: center; gap: 0.5em; font-weight: 600;">
+      <input name="render" type="checkbox" style="width: auto;">
+      Render MP4 of the simulation (adds ~10-60s)
+    </label>
+
+    <button type="submit" id="submitBtn">Submit job</button>
+  </form>
+
+  <div id="status" class="status" style="display:none">
+    <strong>Status:</strong> <span id="statusText"></span><br>
+    <small>Job ID: <code id="jobId"></code></small>
+    <pre id="result" style="display:none"></pre>
+  </div>
+
+  <script>
+  document.getElementById("runForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const body = {
+      config: f.config.value,
+      timelimit: parseFloat(f.timelimit.value),
+      logstep: parseInt(f.logstep.value, 10),
+    };
+    const ref = f.sibernetic_ref.value.trim();
+    if (ref) body.sibernetic_ref = ref;
+    if (f.render.checked) body.render = true;
+    const btn = document.getElementById("submitBtn");
+    const statusBox = document.getElementById("status");
+    const statusText = document.getElementById("statusText");
+    const jobIdEl = document.getElementById("jobId");
+    const resultEl = document.getElementById("result");
+
+    btn.disabled = true;
+    statusBox.style.display = "block";
+    statusText.textContent = "submitting...";
+    resultEl.style.display = "none";
+
+    try {
+      const resp = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) throw new Error(`submit failed: ${resp.status} ${await resp.text()}`);
+      const { job_id } = await resp.json();
+      jobIdEl.textContent = job_id;
+
+      // Poll status every 5 sec.
+      while (true) {
+        await new Promise(r => setTimeout(r, 5000));
+        const sResp = await fetch(`/api/status/${job_id}`);
+        const s = await sResp.json();
+        statusText.textContent = s.status;
+        if (s.status === "succeeded" || s.status === "failed") {
+          const rResp = await fetch(`/api/result/${job_id}`);
+          const r = await rResp.json();
+          resultEl.textContent = JSON.stringify(r, null, 2);
+          resultEl.style.display = "block";
+          // If a render was produced, show a player + download link.
+          if (r.result && r.result.render_local_path) {
+            const renderUrl = `/api/render/${job_id}`;
+            const player = document.createElement("div");
+            player.style.marginTop = "1em";
+            player.innerHTML = `
+              <strong>Render:</strong>
+              <video src="${renderUrl}" controls style="display:block; max-width: 100%; margin-top: 0.5em;"></video>
+              <a href="${renderUrl}" download="sibernetic-${job_id}.mp4">Download MP4</a>
+            `;
+            statusBox.appendChild(player);
+          }
+          break;
+        }
+      }
+    } catch (err) {
+      statusText.textContent = `error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Alert when a GPU instance has been running for 2 hours straight. Budget
+# alerts lag behind real usage by hours, so this is what catches a stuck job.
+#
+#   gcloud alpha monitoring policies create \
+#     --project=PROJECT \
+#     --policy-from-file=monitoring/long-running-instance.yaml \
+#     --notification-channels=CHANNEL_ID[,CHANNEL_ID]
+displayName: "Sibernetic runner: GPU instance running over 2 hours"
+combiner: OR
+documentation:
+  mimeType: text/markdown
+  content: >-
+    A sibernetic-runner GPU instance has been up for 2 hours straight, at roughly
+    $1.31 per hour. If no long simulation is expected, check the service logs and
+    stop it by redeploying the service.
+conditions:
+  - displayName: "Instance count above 0 for 2 hours"
+    conditionThreshold:
+      filter: >-
+        resource.type = "cloud_run_revision"
+        AND resource.labels.service_name = "sibernetic-runner"
+        AND metric.type = "run.googleapis.com/container/instance_count"
+      aggregations:
+        - alignmentPeriod: 300s
+          perSeriesAligner: ALIGN_MAX
+          crossSeriesReducer: REDUCE_SUM
+      comparison: COMPARISON_GT
+      thresholdValue: 0
+      duration: 7200s
+      trigger:
+        count: 1
