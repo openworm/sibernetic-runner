@@ -38,6 +38,13 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
 
     print(f"Loading {position_file} (skip={frame_skip}, max={max_frames})...")
 
+    # Sibernetic's development branch writes boundary particles once, in the
+    # first frame only; older branches repeat them in every frame. Tell them
+    # apart by whether the particle rows divide evenly into full frames.
+    with open(position_file) as f:
+        num_rows = sum(1 for row in f if len(row.split()) == 4)
+    boundary_in_every_frame = None
+
     for line in open(position_file):
         ws = line.split()
 
@@ -62,8 +69,16 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
         if log_step is not None:
             pcount += 1
 
-            total_particles = numOfBoundaryP + numOfElasticP + numOfLiquidP
-            if pcount == total_particles:
+            active_particles = numOfElasticP + numOfLiquidP
+            total_particles = active_particles + numOfBoundaryP
+            if boundary_in_every_frame is None:
+                boundary_in_every_frame = num_rows % total_particles == 0
+            frame_particles = (
+                total_particles
+                if boundary_in_every_frame or frame_count == 0
+                else active_particles
+            )
+            if pcount == frame_particles:
                 # Only keep every Nth frame
                 if frame_count % frame_skip == 0 and len(points_per_frame) < max_frames:
                     points_per_frame.append(np.array(points))
@@ -182,7 +197,8 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
 
         if include_boundary:
             mask = is_boundary_per_frame[i]
-            boundary_mesh.points = pts[keep_floor_per_frame[i]]
+            if keep_floor_per_frame[i].any():
+                boundary_mesh.points = pts[keep_floor_per_frame[i]]
             mesh.points = pts[~mask]
             mesh["types"] = tps[~mask]
         else:
@@ -190,7 +206,7 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
             mesh["types"] = tps
 
         # Update time text
-        sim_time = i * log_step * time_step
+        sim_time = i * frame_skip * log_step * time_step
         plotter.remove_actor(time_text)
         time_text = plotter.add_text(
             f"Time: {sim_time:.3f} s",
