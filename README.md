@@ -94,6 +94,8 @@ gcloud storage buckets add-iam-policy-binding gs://openworm-agents-prod-sibernet
   --member="$USER" --role=roles/storage.objectViewer
 gcloud projects add-iam-policy-binding openworm-agents-prod \
   --member="$USER" --role=roles/logging.viewer --condition=None
+gcloud projects add-iam-policy-binding openworm-agents-prod \
+  --member="$USER" --role=roles/cloudbuild.builds.viewer --condition=None
 ```
 
 ## Files
