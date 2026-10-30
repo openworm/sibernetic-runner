@@ -44,6 +44,8 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
     with open(position_file) as f:
         num_rows = sum(1 for row in f if len(row.split()) == 4)
     boundary_in_every_frame = None
+    boundary_points = []
+    boundary_types = []
 
     for line in open(position_file):
         ws = line.split()
@@ -79,6 +81,13 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
                 else active_particles
             )
             if pcount == frame_particles:
+                # Reuse the first frame's boundary so every frame looks alike.
+                if frame_count == 0:
+                    boundary_points = [p for p, t in zip(points, types) if t >= 3]
+                    boundary_types = [t for t in types if t >= 3]
+                elif not boundary_in_every_frame:
+                    points = points + boundary_points
+                    types = types + boundary_types
                 # Only keep every Nth frame
                 if frame_count % frame_skip == 0 and len(points_per_frame) < max_frames:
                     points_per_frame.append(np.array(points))
@@ -197,8 +206,7 @@ def render_to_movie(position_file, output_file="worm_simulation.mp4", fps=30,
 
         if include_boundary:
             mask = is_boundary_per_frame[i]
-            if keep_floor_per_frame[i].any():
-                boundary_mesh.points = pts[keep_floor_per_frame[i]]
+            boundary_mesh.points = pts[keep_floor_per_frame[i]]
             mesh.points = pts[~mask]
             mesh["types"] = tps[~mask]
         else:
