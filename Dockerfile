@@ -63,6 +63,10 @@ RUN git clone "${SIBERNETIC_REPO}" /app/sibernetic \
     && git checkout "${SIBERNETIC_REF}" \
     && git rev-parse HEAD > /app/sibernetic-commit.txt
 WORKDIR /app/sibernetic
+# On Linux, Sibernetic includes <CL/cl.hpp>, which Ubuntu's OpenCL packages no
+# longer ship (its own CI gets it from the AMD SDK). Sibernetic bundles the same
+# Khronos header, so install that copy. Refs built at request time use it too.
+RUN install -D inc/OpenCL/cl.hpp /usr/local/include/CL/cl.hpp
 RUN make all
 
 # Copy the runner app last so iterating on it doesn't bust the
