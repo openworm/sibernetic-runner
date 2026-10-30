@@ -1,9 +1,8 @@
 """FastAPI wrapper for Sibernetic.
 
-Submits a sim, polls status, fetches results. Mirrors the
-voice-transcriber's job pattern: long-running work runs in a background
-thread because Cloud Run's HTTP layer can't hold connections open for
-minutes at a time.
+Submits a sim, polls status, fetches results. Long-running work runs in a
+background thread because Cloud Run's HTTP layer can't hold connections open
+for minutes at a time.
 
 Endpoints:
     GET  /                        HTML form (browser test path)
