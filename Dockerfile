@@ -67,13 +67,13 @@ WORKDIR /app/sibernetic
 # longer ship (its own CI gets it from the AMD SDK). Sibernetic bundles the same
 # Khronos header, so install that copy. Refs built at request time use it too.
 RUN install -D inc/OpenCL/cl.hpp /usr/local/include/CL/cl.hpp
-RUN make all
+RUN make all -j7
 
 # Copy the runner app last so iterating on it doesn't bust the
 # Sibernetic-build cache layer.
 WORKDIR /app
-COPY main.py runner.py render_movie.py ./
-COPY templates/ ./templates/
+COPY main.py runner.py render_movie.py VERSION ./
+COPY templates/home.html  ./templates/
 
 EXPOSE 8080
 
