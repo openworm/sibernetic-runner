@@ -16,7 +16,6 @@ jobs:
     - uses: actions/checkout@v7
     - name: Build the Docker image
       run: |
-        chmod a+w output/
         ls -alth
         ./build.sh
 
