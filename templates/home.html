@@ -16,14 +16,14 @@
   </style>
 </head>
 <body>
-  <h1>Sibernetic Runner</h1>
+  <h1>Sibernetic Runner {{ version }}</h1>
   <p class="sub">Submit a Sibernetic (OpenCL) simulation job to the Cloud Run GPU service.</p>
 
   <form id="runForm">
     <label>Config (Sibernetic config name)</label>
     <input name="config" value="demo1" required>
 
-    <label>Time limit (sim seconds)</label>
+    <label>Time limit (sim duration in seconds)</label>
     <input name="timelimit" type="number" step="0.001" value="0.05" required>
 
     <label>Log step</label>

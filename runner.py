@@ -35,6 +35,14 @@ SIBERNETIC_BUILD_TIMEOUT_SECONDS = 900  # `make all` on Linux ≈ 2-3 min on 8 v
 # the whole instance at 3600s.
 DEFAULT_SIM_TIMEOUT_SECONDS = 3300
 
+def print_(msg: str) -> None:
+    """Print a debug message to stdout with a timestamp.
+
+    Cloud Run's logging system captures stdout/stderr and timestamps it,
+    but we want to see the time of each debug message relative to the
+    start of the request, so we add our own timestamp. 
+    """
+    print(f"[{time.strftime('SibRun %Y-%m-%d %H:%M:%S')}] {msg}")
 
 @dataclass
 class RunResult:
@@ -267,15 +275,23 @@ def run_sim(
         f"lpath={output_dir}",
     ]
 
+    # The embedded Python imports main_sim from the Sibernetic root.
+    env = {**os.environ, "PYTHONPATH": f"{sim_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}".rstrip(os.pathsep)}
+
     start = time.monotonic()
+
+    print_(f"Running Sibernetic with command: {cmd} in {sim_root} with PYTHONPATH={env['PYTHONPATH']} and output_dir={output_dir}")
     proc = subprocess.run(
         cmd,
         cwd=str(sim_root),  # cwd matters: Sibernetic resolves -f config/* relative to it
+        env=env,
         capture_output=True,
         text=True,
         timeout=timeout,
     )
     wall_clock = time.monotonic() - start
+
+    print_(f"Sibernetic finished with exit code {proc.returncode} in {wall_clock:.2f}s")
 
     pos_file = output_dir / "position_buffer.txt"
     metrics = _measure_cube_stability(pos_file, sim_root) if proc.returncode == 0 else None

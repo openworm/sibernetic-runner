@@ -50,6 +50,11 @@ RENDERS_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="Sibernetic Runner", version="0.1.0")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+try:
+    VERSION = (Path(__file__).parent / "VERSION").read_text().strip()
+except OSError:
+    VERSION = "unknown"
+
 # Self-shutdown after IDLE_TIMEOUT_SECONDS of no active jobs. Cloud Run's
 # default idle scale-to-zero is ~15 min; that's too generous for a
 # GPU-attached service when --no-cpu-throttling means warm == billed.
@@ -241,7 +246,7 @@ def health() -> dict:
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
     _bump_activity()
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse("home.html", {"request": request, "version": VERSION})
 
 
 @app.post("/api/run")
