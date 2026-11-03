@@ -20,4 +20,4 @@ options:
   # default builder out of memory.
   machineType: 'E2_HIGHCPU_32'
   dynamicSubstitutions: true
-timeout: 1800s
+timeout: 3600s
