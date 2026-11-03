@@ -265,18 +265,41 @@ def run_sim(
             )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        str(binary),
-        "-no_g",
-        "-f", config,           # e.g. "demo1" or "configuration/test/test_energy"
-        f"timelimit={timelimit}",
-        f"logstep={logstep}",
-        "-l_to",
-        f"lpath={output_dir}",
-    ]
+    use_c302 = True
 
-    # The embedded Python imports main_sim from the Sibernetic root.
-    env = {**os.environ, "PYTHONPATH": f"{sim_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}".rstrip(os.pathsep)}
+    if not use_c302:
+        cmd = [
+            str(binary),
+            "-no_g",
+            "-f", config,           # e.g. "demo1" or "configuration/test/test_energy"
+            f"timelimit={timelimit}",
+            f"logstep={logstep}",
+            "-l_to",
+            f"lpath={output_dir}",
+        ]
+    else:
+        # python3 sibernetic_c302.py -test -noc302 -duration 0.1 -simName test_noc302 -q
+
+        cmd = [
+            "python3", "sibernetic_c302.py", "-test", "-noc302",
+            "-configuration", config,         
+            "-duration", str(timelimit * 1000.0),  # wrapper takes ms; we take seconds
+            "-logstep", str(logstep),
+            # The wrapper writes to <outDir>/<simName>; with outDir = parent and
+            # simName = our dir's name, that is exactly output_dir.
+            "-outDir", str(output_dir.parent),
+            "-simName", output_dir.name,
+            "-q",
+        ]
+
+    # The embedded Python imports main_sim from the Sibernetic root. The
+    # wrapper runs ./Release/Sibernetic from $SIBERNETIC_HOME, so point that at
+    # sim_root too, or a sibernetic_ref build would be ignored.
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{sim_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}".rstrip(os.pathsep),
+        "SIBERNETIC_HOME": str(sim_root),
+    }
 
     start = time.monotonic()
 
@@ -292,6 +315,9 @@ def run_sim(
     wall_clock = time.monotonic() - start
 
     print_(f"Sibernetic finished with exit code {proc.returncode} in {wall_clock:.2f}s")
+    if proc.returncode != 0:
+        print_(f"--- stdout (tail) ---\n{proc.stdout[-4000:]}")
+        print_(f"--- stderr (tail) ---\n{proc.stderr[-4000:]}")
 
     pos_file = output_dir / "position_buffer.txt"
     metrics = _measure_cube_stability(pos_file, sim_root) if proc.returncode == 0 else None
@@ -352,6 +378,7 @@ def upload_buffers_to_gcs(output_dir: Path, gcs_bucket: str, gcs_prefix: str) ->
         "velocity_buffer.txt",
         "connection_buffer.txt",
         "membranes_buffer.txt",
+        "report.json",
         "render.mp4",
     ):
         local = output_dir / name

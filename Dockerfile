@@ -33,7 +33,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3.12 \
         python3.12-dev \
         python3.12-venv \
-        python3-numpy \
         python3-pip \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
     && rm -rf /var/lib/apt/lists/*
@@ -57,7 +56,7 @@ RUN pip3 install --no-cache-dir -r requirements.txt  --break-system-packages
 # branch without touching the Dockerfile. Defaults to Sibernetic's default
 # branch.
 ARG SIBERNETIC_REPO=https://github.com/openworm/sibernetic.git
-ARG SIBERNETIC_REF=development
+ARG SIBERNETIC_REF=ow-test-w2d
 RUN git clone "${SIBERNETIC_REPO}" /app/sibernetic \
     && cd /app/sibernetic \
     && git checkout "${SIBERNETIC_REF}" \
@@ -68,6 +67,35 @@ WORKDIR /app/sibernetic
 # Khronos header, so install that copy. Refs built at request time use it too.
 RUN install -D inc/OpenCL/cl.hpp /usr/local/include/CL/cl.hpp
 RUN make all -j7
+
+
+
+################################################################################
+########     Install NEURON simulator
+
+RUN pip3 install neuron==8.2.6  --break-system-packages
+
+
+################################################################################
+########     Install c302 for building neuronal network models
+
+WORKDIR /app
+RUN git clone https://github.com/openworm/c302.git && \
+  cd c302 && \
+  git checkout development && \
+  pip3 install .  --break-system-packages
+
+# Note: pyNeuroML installed with the above library
+
+
+################################################################################
+########     Set some paths//environment variables
+
+ENV C302_HOME=/app/c302
+ENV SIBERNETIC_HOME=/app/sibernetic
+ENV PYTHONPATH=/app/c302:/app/sibernetic
+
+ENV NEURON_MODULE_OPTIONS=-nogui
 
 # Copy the runner app last so iterating on it doesn't bust the
 # Sibernetic-build cache layer.
