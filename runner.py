@@ -238,7 +238,9 @@ def run_sim(
     timelimit: float,
     logstep: int,
     output_dir: Path,
+    lems: str | None = None,
     c302_ref: str = "no_c302",
+    c302params: str = "C2",
     timeout: int = DEFAULT_SIM_TIMEOUT_SECONDS,
     sibernetic_ref: str | None = None,
     render: bool = False,
@@ -283,10 +285,19 @@ def run_sim(
 
         cmd = [
             "python3", "sibernetic_c302.py", "-test",
-            # "no_c302" turns the c302 network off; any other value names the
-            # c302 reference (c302.c302_<reference>) that drives the muscles.
-            *(["-noc302"] if c302_ref == "no_c302" else []),
-            "-reference", c302_ref,
+            # A LEMS file defines the network itself, so -reference and
+            # -c302params are left out. Otherwise "no_c302" turns the c302
+            # network off; any other value names the c302 reference
+            # (c302.c302_<reference>) that drives the muscles.
+            *(
+                ["-lems", lems]
+                if lems
+                else [
+                    *(["-noc302"] if c302_ref == "no_c302" else []),
+                    "-reference", c302_ref,
+                    "-c302params", c302params,
+                ]
+            ),
             "-configuration", config,
             "-duration", str(timelimit * 1000.0),  # wrapper takes ms; we take seconds
             "-logstep", str(logstep),
