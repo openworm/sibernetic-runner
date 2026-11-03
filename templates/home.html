@@ -34,6 +34,13 @@
       <option value="worm_swim_half_resolution">worm_swim_half_resolution</option>
     </select>
 
+    <label>c302 reference (neuronal model driving the muscles)</label>
+    <select name="c302_ref" required>
+      <option value="no_c302" selected>no_c302</option>
+      <option value="FW">FW</option>
+      <option value="TargetMuscle">TargetMuscle</option>
+    </select>
+
     <label>Time limit (sim duration in seconds)</label>
     <input name="timelimit" type="number" step="0.001" value="0.05" required>
 
@@ -63,6 +70,7 @@
     const f = e.target;
     const body = {
       config: f.config.value,
+      c302_ref: f.c302_ref.value,
       timelimit: parseFloat(f.timelimit.value),
       logstep: parseInt(f.logstep.value, 10),
     };

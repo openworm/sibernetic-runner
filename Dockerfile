@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3.12-dev \
         python3.12-venv \
         python3-pip \
+        openjdk-21-jdk \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
     && rm -rf /var/lib/apt/lists/*
 
