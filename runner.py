@@ -238,6 +238,7 @@ def run_sim(
     timelimit: float,
     logstep: int,
     output_dir: Path,
+    c302_ref: str = "no_c302",
     timeout: int = DEFAULT_SIM_TIMEOUT_SECONDS,
     sibernetic_ref: str | None = None,
     render: bool = False,
@@ -265,18 +266,46 @@ def run_sim(
             )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        str(binary),
-        "-no_g",
-        "-f", config,           # e.g. "demo1" or "configuration/test/test_energy"
-        f"timelimit={timelimit}",
-        f"logstep={logstep}",
-        "-l_to",
-        f"lpath={output_dir}",
-    ]
+    use_sibernetic_c302 = True
 
-    # The embedded Python imports main_sim from the Sibernetic root.
-    env = {**os.environ, "PYTHONPATH": f"{sim_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}".rstrip(os.pathsep)}
+    if not use_sibernetic_c302:
+        cmd = [
+            str(binary),
+            "-no_g",
+            "-f", config,           # e.g. "demo1" or "configuration/test/test_energy"
+            f"timelimit={timelimit}",
+            f"logstep={logstep}",
+            "-l_to",
+            f"lpath={output_dir}",
+        ]
+    else:
+        # python3 sibernetic_c302.py -test -noc302 -duration 0.1 -simName test_noc302 -q
+
+        cmd = [
+            "python3", "sibernetic_c302.py", "-test",
+            # "no_c302" turns the c302 network off; any other value names the
+            # c302 reference (c302.c302_<reference>) that drives the muscles.
+            *(["-noc302"] if c302_ref == "no_c302" else []),
+            "-reference", c302_ref,
+            "-configuration", config,
+            "-duration", str(timelimit * 1000.0),  # wrapper takes ms; we take seconds
+            "-logstep", str(logstep),
+            # The wrapper writes to <outDir>/<simName>; with outDir = parent and
+            # simName = our dir's name, that is exactly output_dir.
+            "-outDir", str(output_dir.parent),
+            "-simName", output_dir.name,
+            "-device", "gpu",
+            "-q",
+        ]
+
+    # The embedded Python imports main_sim from the Sibernetic root. The
+    # wrapper runs ./Release/Sibernetic from $SIBERNETIC_HOME, so point that at
+    # sim_root too, or a sibernetic_ref build would be ignored.
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{sim_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}".rstrip(os.pathsep),
+        "SIBERNETIC_HOME": str(sim_root),
+    }
 
     start = time.monotonic()
 
@@ -292,6 +321,9 @@ def run_sim(
     wall_clock = time.monotonic() - start
 
     print_(f"Sibernetic finished with exit code {proc.returncode} in {wall_clock:.2f}s")
+    if proc.returncode != 0:
+        print_(f"--- stdout (tail) ---\n{proc.stdout[-4000:]}")
+        print_(f"--- stderr (tail) ---\n{proc.stderr[-4000:]}")
 
     pos_file = output_dir / "position_buffer.txt"
     metrics = _measure_cube_stability(pos_file, sim_root) if proc.returncode == 0 else None
@@ -334,10 +366,14 @@ def run_sim(
     )
 
 
-def upload_buffers_to_gcs(output_dir: Path, gcs_bucket: str, gcs_prefix: str) -> dict[str, str]:
-    """Upload position/velocity buffers to GCS, return public-URL-shaped map.
+UPLOAD_SUFFIXES = (".txt", ".dat", ".wcon", ".xml", ".nml")
 
-    Returns {"position_buffer": "gs://...", "velocity_buffer": "gs://..."}.
+
+def upload_buffers_to_gcs(output_dir: Path, gcs_bucket: str, gcs_prefix: str) -> dict[str, str]:
+    """Upload the run's output files (see UPLOAD_SUFFIXES), report.json and render.mp4 to GCS.
+
+    Returns {"position_buffer": "gs://...", "worm_motion_log.wcon": "gs://..."},
+    keyed by file name, without the extension for .txt and .mp4 only.
     Buffers are large (often 100s of MB); Cloud Run's per-request memory
     is limited and ephemeral, so we stream them to durable storage and
     return references rather than the bytes themselves.
@@ -347,21 +383,26 @@ def upload_buffers_to_gcs(output_dir: Path, gcs_bucket: str, gcs_prefix: str) ->
     client = storage.Client()
     bucket = client.bucket(gcs_bucket)
     out: dict[str, str] = {}
-    for name in (
-        "position_buffer.txt",
-        "velocity_buffer.txt",
-        "connection_buffer.txt",
-        "membranes_buffer.txt",
-        "render.mp4",
-    ):
+    
+    # Every file with an UPLOAD_SUFFIXES extension, plus the report and the render.
+    names = sorted(
+        p.name for p in output_dir.iterdir()
+        if p.is_file() and p.suffix in UPLOAD_SUFFIXES
+    )
+    names += [n for n in ("report.json", "render.mp4") if n not in names]
+    for name in names:
         local = output_dir / name
         if not local.exists():
             continue
         blob_path = f"{gcs_prefix}/{name}"
         blob = bucket.blob(blob_path)
         blob.upload_from_filename(str(local))
-        key = name.replace(".txt", "").replace(".mp4", "")
+        # Only .txt and .mp4 are stripped, so position_buffer and render keep
+        # their keys and foo.txt / foo.wcon can't share one.
+        key = name.removesuffix(".txt").removesuffix(".mp4")
         out[key] = f"gs://{gcs_bucket}/{blob_path}"
+
+
     return out
 
 

@@ -14,10 +14,10 @@ images:
 substitutions:
   _IMAGE: 'us-east4-docker.pkg.dev/${PROJECT_ID}/sibernetic-runner/sibernetic-runner:latest'
   _SIBERNETIC_REPO: 'https://github.com/openworm/sibernetic.git'
-  _SIBERNETIC_REF: 'development'
+  _SIBERNETIC_REF: 'ow-test-w2d'
 options:
   # Compiling Sibernetic on top of the nvidia/cuda devel image runs the
   # default builder out of memory.
   machineType: 'E2_HIGHCPU_32'
   dynamicSubstitutions: true
-timeout: 1800s
+timeout: 3600s

@@ -27,6 +27,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -98,6 +99,11 @@ _jobs_lock = threading.Lock()
 
 class RunRequest(BaseModel):
     config: str = Field(default="demo1", description="Sibernetic config name (e.g. 'demo1' or 'configuration/test/test_energy')")
+    c302_ref: Literal["no_c302", "FW", "TargetMuscle"] = Field(
+        default="no_c302",
+        description="c302 neuronal model reference passed to sibernetic_c302.py as -reference. "
+                    "'no_c302' runs Sibernetic's built-in sine-wave muscle generator instead (-noc302).",
+    )
     timelimit: float = Field(default=0.05, gt=0, le=60.0, description="Sim seconds")
     logstep: int = Field(default=10, ge=1, description="Log every Nth step")
     sibernetic_ref: str | None = Field(
@@ -160,6 +166,7 @@ def _run_job(job_id: str, req: RunRequest) -> None:
     try:
         result = runner.run_sim(
             config=config_arg,
+            c302_ref=req.c302_ref,
             timelimit=req.timelimit,
             logstep=req.logstep,
             output_dir=out_dir,

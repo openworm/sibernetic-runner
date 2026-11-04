@@ -21,7 +21,25 @@
 
   <form id="runForm">
     <label>Config (Sibernetic config name)</label>
-    <input name="config" value="demo1" required>
+    <select name="config" required>
+      <option value="demo1" selected>demo1</option>
+      <option value="demo2">demo2</option>
+      <option value="worm">worm</option>
+      <option value="worm_no_water">worm_no_water</option>
+      <option value="worm_crawling">worm_crawling</option>
+      <option value="worm_deep_water">worm_deep_water</option>
+      <option value="worm_crawl_half_resolution">worm_crawl_half_resolution</option>
+      <option value="worm_swim_half_resolution_immersed">worm_swim_half_resolution_immersed</option>
+      <option value="worm_alone_half_resolution">worm_alone_half_resolution</option>
+      <option value="worm_swim_half_resolution">worm_swim_half_resolution</option>
+    </select>
+
+    <label>c302 reference (neuronal model driving the muscles)</label>
+    <select name="c302_ref" required>
+      <option value="no_c302" selected>no_c302</option>
+      <option value="FW">FW</option>
+      <option value="TargetMuscle">TargetMuscle</option>
+    </select>
 
     <label>Time limit (sim duration in seconds)</label>
     <input name="timelimit" type="number" step="0.001" value="0.05" required>
@@ -52,6 +70,7 @@
     const f = e.target;
     const body = {
       config: f.config.value,
+      c302_ref: f.c302_ref.value,
       timelimit: parseFloat(f.timelimit.value),
       logstep: parseInt(f.logstep.value, 10),
     };
@@ -68,6 +87,8 @@
     statusBox.style.display = "block";
     statusText.textContent = "submitting...";
     resultEl.style.display = "none";
+    const oldPlayer = document.getElementById("renderPlayer");
+    if (oldPlayer) oldPlayer.remove();
 
     try {
       const resp = await fetch("/api/run", {
@@ -91,9 +112,10 @@
           resultEl.textContent = JSON.stringify(r, null, 2);
           resultEl.style.display = "block";
           // If a render was produced, show a player + download link.
-          if (r.result && r.result.render_local_path) {
+          if (r.render_local_path || (r.buffer_urls && r.buffer_urls.render)) {
             const renderUrl = `/api/render/${job_id}`;
             const player = document.createElement("div");
+            player.id = "renderPlayer";
             player.style.marginTop = "1em";
             player.innerHTML = `
               <strong>Render:</strong>
