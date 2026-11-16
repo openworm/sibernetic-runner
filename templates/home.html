@@ -16,15 +16,56 @@
   </style>
 </head>
 <body>
-  <h1>Sibernetic Runner</h1>
+  <h1>Sibernetic Runner {{ version }}</h1>
   <p class="sub">Submit a Sibernetic (OpenCL) simulation job to the Cloud Run GPU service.</p>
 
   <form id="runForm">
     <label>Config (Sibernetic config name)</label>
-    <input name="config" value="demo1" required>
+    <select name="config" required>
+      <option value="demo1" selected>demo1</option>
+      <option value="demo2">demo2</option>
+      <option value="worm">worm</option>
+      <option value="worm_no_water">worm_no_water</option>
+      <option value="worm_crawling">worm_crawling</option>
+      <option value="worm_deep_water">worm_deep_water</option>
+      <option value="worm_crawl_half_resolution">worm_crawl_half_resolution</option>
+      <option value="worm_swim_half_resolution_immersed">worm_swim_half_resolution_immersed</option>
+      <option value="worm_alone_half_resolution">worm_alone_half_resolution</option>
+      <option value="worm_swim_half_resolution">worm_swim_half_resolution</option>
+    </select>
 
-    <label>Time limit (sim seconds)</label>
+    <label>LEMS file (network model driving the muscles)</label>
+    <select name="lems">
+      <option value="" selected>No LEMS, use c302 ref/params below</option>
+      <option value="tests/NeuroML/exPGSR21_103_10s_nml_musc/LEMS_Worm2D.xml">tests/NeuroML/exPGSR21_103_10s_nml_musc/LEMS_Worm2D.xml</option>
+      <option value="tests/NeuroML/exPGSR21_23_10s_nml_musc/LEMS_Worm2D.xml">tests/NeuroML/exPGSR21_23_10s_nml_musc/LEMS_Worm2D.xml</option>
+    </select>
+
+    <label>c302 reference (neuronal model driving the muscles; ignored if a LEMS file is chosen)</label>
+    <select name="c302_ref" required>
+      <option value="no_c302" selected>no_c302</option>
+      <option value="FW">FW</option>
+      <option value="TargetMuscle">TargetMuscle</option>
+    </select>
+
+    <label>c302 parameter set (ignored when c302 reference is no_c302 or a LEMS file is chosen)</label>
+    <select name="c302params" required>
+      <option value="C0">C0</option>
+      <option value="C2" selected>C2</option>
+      <option value="W2D">W2D</option>
+    </select>
+
+    <label>c302 data reader (ignored when a LEMS file is chosen)</label>
+    <select name="datareader" required>
+      <option value="UpdatedSpreadsheetDataReader2" selected>UpdatedSpreadsheetDataReader2</option>
+      <option value="SpreadsheetDataReader">SpreadsheetDataReader</option>
+    </select>
+
+    <label>Time limit (sim duration in seconds)</label>
     <input name="timelimit" type="number" step="0.001" value="0.05" required>
+
+    <label>Time step dt (ms; Sibernetic's default is 0.005)</label>
+    <input name="dt" type="number" step="any" min="0.0001" value="0.005" required>
 
     <label>Log step</label>
     <input name="logstep" type="number" min="1" value="10" required>
@@ -52,11 +93,16 @@
     const f = e.target;
     const body = {
       config: f.config.value,
+      c302_ref: f.c302_ref.value,
+      c302params: f.c302params.value,
+      datareader: f.datareader.value,
       timelimit: parseFloat(f.timelimit.value),
+      dt: parseFloat(f.dt.value),
       logstep: parseInt(f.logstep.value, 10),
     };
     const ref = f.sibernetic_ref.value.trim();
     if (ref) body.sibernetic_ref = ref;
+    if (f.lems.value) body.lems = f.lems.value;
     if (f.render.checked) body.render = true;
     const btn = document.getElementById("submitBtn");
     const statusBox = document.getElementById("status");
@@ -68,6 +114,8 @@
     statusBox.style.display = "block";
     statusText.textContent = "submitting...";
     resultEl.style.display = "none";
+    const oldPlayer = document.getElementById("renderPlayer");
+    if (oldPlayer) oldPlayer.remove();
 
     try {
       const resp = await fetch("/api/run", {
@@ -91,9 +139,10 @@
           resultEl.textContent = JSON.stringify(r, null, 2);
           resultEl.style.display = "block";
           // If a render was produced, show a player + download link.
-          if (r.result && r.result.render_local_path) {
+          if (r.render_local_path || (r.buffer_urls && r.buffer_urls.render)) {
             const renderUrl = `/api/render/${job_id}`;
             const player = document.createElement("div");
+            player.id = "renderPlayer";
             player.style.marginTop = "1em";
             player.innerHTML = `
               <strong>Render:</strong>
