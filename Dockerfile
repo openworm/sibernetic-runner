@@ -101,7 +101,7 @@ ENV NEURON_MODULE_OPTIONS=-nogui
 # Copy the runner app last so iterating on it doesn't bust the
 # Sibernetic-build cache layer.
 WORKDIR /app
-COPY main.py runner.py render_movie.py VERSION ./
+COPY main.py runner.py render_movie.py job.py VERSION ./
 COPY templates/home.html  ./templates/
 
 EXPOSE 8080
