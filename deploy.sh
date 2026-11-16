@@ -11,7 +11,7 @@ set -euo pipefail
 source ./user_settings.sh
 
 PROJECT="${PROJECT:-${USER_PROJECT}}"
-REGION="${REGION:-us-east4}"
+REGION="${REGION:-${USER_REGION}}"
 SERVICE="${SERVICE:-sibernetic-runner}"
 BUCKET="${BUCKET:-${PROJECT}-sibernetic-results}"
 REPOSITORY="${REPOSITORY:-sibernetic-runner}"

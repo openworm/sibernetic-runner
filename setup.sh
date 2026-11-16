@@ -4,8 +4,10 @@
 # account, which can write to that bucket and nothing else.
 set -euo pipefail
 
-PROJECT="${PROJECT:-openworm-agents-prod}"
-REGION="${REGION:-us-east4}"
+source ./user_settings.sh
+
+PROJECT="${PROJECT:-${USER_PROJECT}}"
+REGION="${REGION:-${USER_REGION}}"
 BUCKET="${BUCKET:-${PROJECT}-sibernetic-results}"
 REPOSITORY="${REPOSITORY:-sibernetic-runner}"
 RUNTIME_SA_NAME="${RUNTIME_SA_NAME:-sibernetic-runner}"
