@@ -99,7 +99,7 @@ _jobs_lock = threading.Lock()
 
 class RunRequest(BaseModel):
     config: str = Field(default="demo1", description="Sibernetic config name (e.g. 'demo1' or 'configuration/test/test_energy')")
-    lems: Literal["tests/NeuroML/exPGSR21_103_10s_nml_musc/LEMS_Worm2D.xml"] | None = Field(
+    lems: Literal["tests/NeuroML/exPGSR21_103_10s_nml_musc/LEMS_Worm2D.xml", "tests/NeuroML/exPGSR21_23_10s_nml_musc/LEMS_Worm2D.xml"] | None = Field(
         default=None,
         description="LEMS file (relative to the Sibernetic root) passed to sibernetic_c302.py as -lems. "
                     "When set, c302_ref and c302params are not passed.",
@@ -109,12 +109,18 @@ class RunRequest(BaseModel):
         description="c302 neuronal model reference passed to sibernetic_c302.py as -reference. "
                     "'no_c302' runs Sibernetic's built-in sine-wave muscle generator instead (-noc302).",
     )
+    datareader: Literal["UpdatedSpreadsheetDataReader2", "SpreadsheetDataReader"] = Field(
+        default="UpdatedSpreadsheetDataReader2",
+        description="c302 data reader passed to sibernetic_c302.py as -datareader. "
+                    "Not passed when lems is set.",
+    )
     c302params: Literal["C0", "C2", "W2D"] = Field(
         default="C2",
         description="c302 parameter set passed to sibernetic_c302.py as -c302params. "
                     "Ignored when c302_ref is 'no_c302'.",
     )
     timelimit: float = Field(default=0.05, gt=0, le=60.0, description="Sim seconds")
+    dt: float = Field(default=0.005, gt=0, le=1.0, description="Time step in ms, passed to sibernetic_c302.py as -dt")
     logstep: int = Field(default=10, ge=1, description="Log every Nth step")
     sibernetic_ref: str | None = Field(
         default=None,
@@ -179,7 +185,9 @@ def _run_job(job_id: str, req: RunRequest) -> None:
             lems=req.lems,
             c302_ref=req.c302_ref,
             c302params=req.c302params,
+            datareader=req.datareader,
             timelimit=req.timelimit,
+            dt=req.dt,
             logstep=req.logstep,
             output_dir=out_dir,
             sibernetic_ref=req.sibernetic_ref,

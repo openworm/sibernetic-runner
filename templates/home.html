@@ -38,6 +38,7 @@
     <select name="lems">
       <option value="" selected>No LEMS, use c302 ref/params below</option>
       <option value="tests/NeuroML/exPGSR21_103_10s_nml_musc/LEMS_Worm2D.xml">tests/NeuroML/exPGSR21_103_10s_nml_musc/LEMS_Worm2D.xml</option>
+      <option value="tests/NeuroML/exPGSR21_23_10s_nml_musc/LEMS_Worm2D.xml">tests/NeuroML/exPGSR21_23_10s_nml_musc/LEMS_Worm2D.xml</option>
     </select>
 
     <label>c302 reference (neuronal model driving the muscles; ignored if a LEMS file is chosen)</label>
@@ -54,8 +55,17 @@
       <option value="W2D">W2D</option>
     </select>
 
+    <label>c302 data reader (ignored when a LEMS file is chosen)</label>
+    <select name="datareader" required>
+      <option value="UpdatedSpreadsheetDataReader2" selected>UpdatedSpreadsheetDataReader2</option>
+      <option value="SpreadsheetDataReader">SpreadsheetDataReader</option>
+    </select>
+
     <label>Time limit (sim duration in seconds)</label>
     <input name="timelimit" type="number" step="0.001" value="0.05" required>
+
+    <label>Time step dt (ms; Sibernetic's default is 0.005)</label>
+    <input name="dt" type="number" step="any" min="0.0001" value="0.005" required>
 
     <label>Log step</label>
     <input name="logstep" type="number" min="1" value="10" required>
@@ -85,7 +95,9 @@
       config: f.config.value,
       c302_ref: f.c302_ref.value,
       c302params: f.c302params.value,
+      datareader: f.datareader.value,
       timelimit: parseFloat(f.timelimit.value),
+      dt: parseFloat(f.dt.value),
       logstep: parseInt(f.logstep.value, 10),
     };
     const ref = f.sibernetic_ref.value.trim();

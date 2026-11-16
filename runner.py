@@ -241,6 +241,8 @@ def run_sim(
     lems: str | None = None,
     c302_ref: str = "no_c302",
     c302params: str = "C2",
+    datareader: str = "UpdatedSpreadsheetDataReader2",
+    dt: float = 0.005,
     timeout: int = DEFAULT_SIM_TIMEOUT_SECONDS,
     sibernetic_ref: str | None = None,
     render: bool = False,
@@ -296,10 +298,12 @@ def run_sim(
                     *(["-noc302"] if c302_ref == "no_c302" else []),
                     "-reference", c302_ref,
                     "-c302params", c302params,
+                    "-datareader", datareader,
                 ]
             ),
             "-configuration", config,
             "-duration", str(timelimit * 1000.0),  # wrapper takes ms; we take seconds
+            "-dt", str(dt),                        # ms
             "-logstep", str(logstep),
             # The wrapper writes to <outDir>/<simName>; with outDir = parent and
             # simName = our dir's name, that is exactly output_dir.
