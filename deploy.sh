@@ -8,7 +8,9 @@
 #   SKIP_BUILD=1 ./deploy.sh                # redeploy the existing image without rebuilding
 set -euo pipefail
 
-PROJECT="${PROJECT:-openworm-agents-prod}"
+source ./user_settings.sh
+
+PROJECT="${PROJECT:-${USER_PROJECT}}"
 REGION="${REGION:-us-east4}"
 SERVICE="${SERVICE:-sibernetic-runner}"
 BUCKET="${BUCKET:-${PROJECT}-sibernetic-results}"
@@ -16,7 +18,7 @@ REPOSITORY="${REPOSITORY:-sibernetic-runner}"
 RUNTIME_SA="${RUNTIME_SA:-sibernetic-runner@${PROJECT}.iam.gserviceaccount.com}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPOSITORY}/sibernetic-runner:latest"
 SIBERNETIC_REPO="${SIBERNETIC_REPO:-https://github.com/openworm/sibernetic.git}"
-SIBERNETIC_REF="${SIBERNETIC_REF:-development}"
+SIBERNETIC_REF="${SIBERNETIC_REF:-${SIB_BRANCH}}"
 
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   echo "==> Building image (Sibernetic ref: ${SIBERNETIC_REF})..."
